@@ -1,4 +1,4 @@
-package client
+package solarman
 
 import (
 	"encoding/json"
