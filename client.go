@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const baseURL = "https://globalapi.solarmanpv.com/device/v1.0"
+const baseURL = "https://globalapi.solarmanpv.com"
 
 type Client struct {
 	c *http.Client
@@ -19,15 +19,10 @@ type Client struct {
 	appID string
 }
 
-func New(appID, appSecret, username, password string) (*Client, error) {
-	auth, err := newAccessToken(appID, appSecret, username, password)
+func New(appID, appSecret, email, password string) (*Client, error) {
+	t, err := newOauthToken(appID, appSecret, email, password)
 	if err != nil {
 		return nil, err
-	}
-
-	var token oauth2.Token
-	if err := json.Unmarshal(auth, &token); err != nil {
-		return nil, fmt.Errorf("could not auth: %w", err)
 	}
 
 	oauthConfg := oauth2.Config{
@@ -35,33 +30,23 @@ func New(appID, appSecret, username, password string) (*Client, error) {
 		ClientSecret: appSecret,
 	}
 
-	c := oauthConfg.Client(context.Background(), &token)
+	c := oauthConfg.Client(context.Background(), t)
 	return &Client{
 		c:     c,
 		appID: appID,
 	}, nil
 }
 
-func newAccessToken(appID, appSecret, username, password string) ([]byte, error) {
-	data := fmt.Sprintf(
-		`{"appSecret":%q,"email":%q,"password":%q}`,
-		appSecret,
-		username,
-		password,
-	)
+func newOauthToken(appID, appSecret, email, password string) (*oauth2.Token, error) {
+	data := fmt.Sprintf(`{"appSecret":%q,"email":%q,"password":%q}`, appSecret, email, password)
+	url := fmt.Sprintf(baseURL+"/account/v1.0/token?appId=%s&language=en&=", appID)
 
-	req, err := http.NewRequest(
-		http.MethodPost,
-		fmt.Sprintf(
-			baseURL+"/token?appId=%s&language=en&=",
-			appID,
-		),
-		strings.NewReader(data),
-	)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("could not auth: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("could not auth: %w", err)
@@ -73,8 +58,26 @@ func newAccessToken(appID, appSecret, username, password string) ([]byte, error)
 		return nil, fmt.Errorf("could not auth: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("could not auth: %w: %s", err, string(bts))
+	}
+
+	var aresp authResponse
+	if err := json.Unmarshal(bts, &aresp); err != nil {
 		return nil, fmt.Errorf("could not auth: %w", err)
 	}
 
-	return bts, nil
+	if !aresp.Success {
+		return nil, fmt.Errorf("could not auth: solarman error: %s", aresp.Msg)
+	}
+
+	var token oauth2.Token
+	if err := json.Unmarshal(bts, &token); err != nil {
+		return nil, fmt.Errorf("could not auth: %w", err)
+	}
+	return &token, nil
+}
+
+type authResponse struct {
+	Msg     string `json:"msg"`
+	Success bool   `json:"success"`
 }

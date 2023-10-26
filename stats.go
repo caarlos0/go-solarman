@@ -12,7 +12,7 @@ func (c *Client) CurrentData(inverterSN string) (CurrentData, error) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf(
-			baseURL+"/currentData?appId=%s&language=en&=",
+			baseURL+"/device/v1.0/currentData?appId=%s&language=en&=",
 			c.appID,
 		),
 		strings.NewReader(fmt.Sprintf(`{"deviceSn":%q}`, inverterSN)),
