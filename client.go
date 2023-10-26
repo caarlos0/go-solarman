@@ -2,6 +2,7 @@ package solarman
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,7 +21,10 @@ type Client struct {
 }
 
 func New(appID, appSecret, email, password string) (*Client, error) {
-	t, err := newOauthToken(appID, appSecret, email, password)
+	t, err := newOauthToken(
+		appID, appSecret, email,
+		fmt.Sprintf("%x", sha256.Sum256([]byte(password))),
+	)
 	if err != nil {
 		return nil, err
 	}
