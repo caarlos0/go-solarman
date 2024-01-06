@@ -2,7 +2,7 @@ module github.com/caarlos0/go-solarman
 
 go 1.21.1
 
-require golang.org/x/oauth2 v0.13.0
+require golang.org/x/oauth2 v0.15.0
 
 require (
 	github.com/golang/protobuf v1.5.3 // indirect
