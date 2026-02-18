@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -74,14 +76,31 @@ func newOauthToken(appID, appSecret, email, password string) (*oauth2.Token, err
 		return nil, fmt.Errorf("could not auth: solarman error: %s", aresp.Msg)
 	}
 
-	var token oauth2.Token
-	if err := json.Unmarshal(bts, &token); err != nil {
+	var tresp tokenResponse
+	if err := json.Unmarshal(bts, &tresp); err != nil {
 		return nil, fmt.Errorf("could not auth: %w", err)
 	}
-	return &token, nil
+
+	expiresIn, _ := strconv.ParseInt(tresp.ExpiresIn, 10, 64)
+	token := &oauth2.Token{
+		AccessToken:  tresp.AccessToken,
+		TokenType:    tresp.TokenType,
+		RefreshToken: tresp.RefreshToken,
+	}
+	if expiresIn > 0 {
+		token.Expiry = time.Now().Add(time.Duration(expiresIn) * time.Second)
+	}
+	return token, nil
 }
 
 type authResponse struct {
 	Msg     string `json:"msg"`
 	Success bool   `json:"success"`
+}
+
+type tokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    string `json:"expires_in"`
 }
