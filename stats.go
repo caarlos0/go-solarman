@@ -9,20 +9,18 @@ import (
 )
 
 func (c *Client) CurrentData(inverterSN string) (CurrentData, error) {
-	req, err := http.NewRequest(
-		http.MethodPost,
-		fmt.Sprintf(
-			baseURL+"/device/v1.0/currentData?appId=%s&language=en&=",
-			c.appID,
-		),
-		strings.NewReader(fmt.Sprintf(`{"deviceSn":%q}`, inverterSN)),
-	)
+	url := fmt.Sprintf(baseURL+"/device/v1.0/currentData?appId=%s&language=en=", c.appID)
+	body := fmt.Sprintf(`{"deviceSn":%q}`, inverterSN)
+
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(body))
 	if err != nil {
 		return CurrentData{}, err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	resp, err := c.c.Do(req)
+	req.Header.Add("Authorization", "Bearer "+c.token)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return CurrentData{}, err
 	}
